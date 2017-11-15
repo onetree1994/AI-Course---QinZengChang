@@ -16,8 +16,8 @@ from sklearn.cluster import DBSCAN
 
 
 # generate gaussian distribution data set
-gauss1 = np.random.multivariate_normal([1, 1], [[1, 0],[0, 1]], 100)
-gauss2 = np.random.multivariate_normal([-4, 0], [[1, 0],[0, 1]], 100)
+gauss1 = np.random.multivariate_normal([1, 0], [[1, 0],[0, 1]], 100)
+gauss2 = np.random.multivariate_normal([-6, 1], [[1, 0],[0, 1]], 100)
 gauss3 = np.random.multivariate_normal([-5, -5], [[2, 0],[0, 1]], 100)
 gauss4 = np.random.multivariate_normal([5, -6], [[1, 0],[-1, 2]], 100)
 gauss = np.vstack((gauss1, gauss2, gauss3, gauss4))
@@ -44,6 +44,11 @@ for i in range(0, num):
     swiss2.append([swissx[i], swissy[i]])
 swiss = np.vstack((swiss1, swiss2))
 
+plt.figure(1)
+plt.plot(gauss[:,0],gauss[:,1],'bo')
+plt.figure(2)
+plt.plot(swiss[:,0],swiss[:,1],'bo')
+
 gauss1 = km.kmeans(gauss, 4, 1000)
 swiss1 = km.kmeans(swiss, 2, 1000)
 
@@ -51,7 +56,7 @@ swiss1 = km.kmeans(swiss, 2, 1000)
 unique_labels = set(gauss1[:,-1])
 colors = [plt.cm.Spectral(each)
             for each in np.linspace(0, 1, len(unique_labels))]
-plt.figure(1)
+plt.figure(3)
 for k, col in zip(unique_labels, colors):
     class_member_mask = (gauss1[:, -1] == k)
     xy = gauss[class_member_mask]
@@ -60,7 +65,7 @@ for k, col in zip(unique_labels, colors):
 unique_labels = set(swiss1[:,-1])
 colors = [plt.cm.Spectral(each)
             for each in np.linspace(0, 1, len(unique_labels))]
-plt.figure(2)
+plt.figure(4)
 for k, col in zip(unique_labels, colors):
     class_member_mask = (swiss1[:, -1] == k)
     xy = swiss[class_member_mask]
@@ -73,7 +78,7 @@ swiss2 = DBSCAN().fit(swiss)
 unique_labels = set(gauss2.labels_)
 colors = [plt.cm.Spectral(each)
             for each in np.linspace(0, 1, len(unique_labels))]
-plt.figure(3)
+plt.figure(5)
 for k, col in zip(unique_labels, colors):
     if k == -1:
         # Black used for noise.
@@ -85,7 +90,7 @@ for k, col in zip(unique_labels, colors):
 unique_labels = set(swiss2.labels_)
 colors = [plt.cm.Spectral(each)
             for each in np.linspace(0, 1, len(unique_labels))]
-plt.figure(4)
+plt.figure(6)
 for k, col in zip(unique_labels, colors):
     if k == -1:
         # Black used for noise.
