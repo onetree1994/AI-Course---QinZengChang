@@ -179,48 +179,196 @@ class GA(object):
                 best = self.lives[i]
                 bestfitness = self.judge(self.issue, best, self.n)
         return best
+
+
+# class -- GA
+class GA2(object):
+    def __init__(self, judge, judge2, issue, firstLife, lifeCount = 10, crossRate = 0.5, mutateRate = 0.05):
+        self.n = len(firstLife)
+        self.judge = judge
+        self.judge2 = judge2
+        self.issue = issue
+        self.firstLife = firstLife
+        self.lifeCount = lifeCount
+        self.crossRate = crossRate
+        self.mutateRate = mutateRate
+        self.lives = []
+        self.initLifes()
+        self.fitness = [i for i in range(0, lifeCount)]
+        self.totalFitness = 0
+   
+    # function -- initialize lifes
+    def initLifes(self):
+        self.lives = []
+        for i in range(0, self.lifeCount):
+            life = copy.deepcopy(self.firstLife)
+            np.random.shuffle(life)
+            self.lives.append(life)
+        
+    # function -- evaluate all lifes
+    def evaluate(self):
+        self.totalFitness = 0
+        self.fitness = self.judge2(self.issue, self.lives)
+        for i in range(0, self.lifeCount):
+            self.totalFitness += self.fitness[i]
+            
+    # function -- select one life in probability
+        # roulette
+    def select(self):
+        partialSum = 0
+        threshold = np.random.uniform(0, self.totalFitness)
+        for i in range(0, self.lifeCount):
+            partialSum += self.fitness[i]
+            if(partialSum >= threshold):
+                return self.lives[i]
+           
+    # function -- cross operator
+        # we have avoid repetition
+    def cross(self, life1, life2):
+        newLife = []
+        # 10 times to increase success probability
+        for j in range(0, 10):
+            lower = np.random.randint(0, self.n - 2)
+            upper = np.random.randint(lower + 1, self.n - 1)
+            segment1 = life1[lower:upper]
+            segment2 = life2[lower:upper]
+            # judge if there exists confliction
+            conflict_flag = 0
+            for i in segment1:
+                if i not in segment2:
+                    newLife = copy.deepcopy(life1)
+                    conflict_flag = 1
+            if(conflict_flag == 1):
+                continue
+            newLife = []
+            # if there is not confliction, exchange
+            for i in range(0, self.n):
+                if(i >= lower and i < upper):
+                    newLife.append(life2[i])
+                else:
+                    newLife.append(life1[i])
+            break
+        return newLife
+    
+    # function -- mutate operator
+        # exchange to avoid repetition
+    def mutate(self, life):
+        newLife = copy.deepcopy(life)
+        pos1 = np.random.randint(0, self.n - 1)
+        pos2 = np.random.randint(0, self.n - 1)       
+        temp = newLife[pos1]
+        newLife[pos1] = newLife[pos2]
+        newLife[pos2] = temp       
+        return newLife
+    
+    # function -- generate next lives
+    def newLives(self):
+        self.evaluate()
+        new_lives = []
+        for i in range(0, self.lifeCount):
+            crossRandom = np.random.rand()
+            mutateRandom = np.random.rand()
+            newLife = []
+            # cross in probability
+            if(crossRandom < self.crossRate):
+                newLife = self.cross(self.select(), self.select())
+            else:
+                newLife = self.select()
+            # mutate in probability
+            if(mutateRandom < self.mutateRate):
+                newLife = self.mutate(newLife)
+            new_lives.append(newLife)
+        return new_lives
+     
+    # function -- algorithm control
+    def control(self, times):
+        for i in range(0, times):
+            self.lives = self.newLives()
+        best = self.lives[0]
+        bestfitness = self.judge(self.issue, best, self.n)
+        for i in range(1, self.lifeCount):
+            if(self.judge(self.issue, self.lives[i], self.n) > bestfitness):
+                best = self.lives[i]
+                bestfitness = self.judge(self.issue, best, self.n)
+        return best
         
 
 # function -- fitness function for TSP
 def judge(tsp, route, n):
     tsp.setRoute(route)
-    return (n/(20*tsp.distance*(0.01/tsp.width)))**10
+    return (n/(20*tsp.distance*(0.01/tsp.width)))**5
 # function -- fitness function for TSP
 def judge2(tsp, route, n):
     tsp.setRoute(route)
     return (n/(20*tsp.distance*(0.01/tsp.width)))**5
+def judge3(tsp, route, n):
+    tsp.setRoute(route)
+    return 1000/tsp.distance
+def judge4(tsp, lives):
+    sortArray = []
+    for i in range(0, len(lives)):
+        tsp.setRoute(lives[i])
+        sortArray.append([tsp.distance, i])
+    sortArray = sorted(sortArray, reverse=True)
+    res = [i for i in range(0, len(lives))]
+    for i in range(0, len(lives)):
+        res[sortArray[i][1]] = i+1
+    return res
+
+N = 200
+tsp = TSP(N, 100, 100)
+route = tsp.route
+ga = GA2(judge3, judge4, tsp, route, 50, 0.9, 0.1)
+
+times = 10000
+plt.figure(1)
+tsp.setRoute(route)
+tsp.show()
+performance = np.zeros([times+1, 2])
+for i in range(1, times+1):
+    route = ga.control(1)
+    performance[i] = [i, judge3(tsp, route, N)]
+    if(not (i%100)):
+        print(judge3(tsp, route, N))
+plt.figure(2)
+tsp.setRoute(route)
+tsp.show()
+plt.figure(3)
+plt.plot(performance[:,0], performance[:,1], '-')
 
 # algorithm  analysis
-N = 20
-tsp = TSP(N, 100, 100)
-firstLife = tsp.route
-
-plt.figure(1)
-maxtimes = 10000
-route1 = []
-route10 = []
-route100 = []
-route1000 = []
-route10000 = []
-performance = np.zeros([maxtimes, 2])
-
-start_time = time.time()
-ga = GA(judge, tsp, firstLife, 50, 0.8, 0.1)
-for i in range(1, maxtimes):
-    print(i)
-    route = ga.control(1)
-    if(i == 9):
-        route10 = copy.deepcopy(route)
-    if(i == 99):
-        route100 = copy.deepcopy(route)
-    if(i == 999):
-        route1000 = copy.deepcopy(route)
-    if(i == 9999):
-        route10000 = copy.deepcopy(route)
-    performance[i] = [i, judge(tsp, route, N)]
-end_time = time.time()
-plt.figure(1)
-plt.plot(performance[:,0], performance[:,1], '-')
-plt.figure(2)
-tsp.setRoute(route10000)
-tsp.show()
+# =============================================================================
+# N = 20
+# tsp = TSP(N, 100, 100)
+# firstLife = tsp.route
+# 
+# plt.figure(1)
+# maxtimes = 10000
+# route1 = []
+# route10 = []
+# route100 = []
+# route1000 = []
+# route10000 = []
+# performance = np.zeros([maxtimes, 2])
+# 
+# start_time = time.time()
+# ga = GA(judge, tsp, firstLife, 50, 0.8, 0.1)
+# for i in range(1, maxtimes):
+#     print(i)
+#     route = ga.control(1)
+#     if(i == 9):
+#         route10 = copy.deepcopy(route)
+#     if(i == 99):
+#         route100 = copy.deepcopy(route)
+#     if(i == 999):
+#         route1000 = copy.deepcopy(route)
+#     if(i == 9999):
+#         route10000 = copy.deepcopy(route)
+#     performance[i] = [i, judge(tsp, route, N)]
+# end_time = time.time()
+# plt.figure(1)
+# plt.plot(performance[:,0], performance[:,1], '-')
+# plt.figure(2)
+# tsp.setRoute(route10000)
+# tsp.show()
+# =============================================================================
